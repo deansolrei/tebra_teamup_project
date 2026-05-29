@@ -1,32 +1,62 @@
 import dotenv from 'dotenv';
+
 dotenv.config();
 
+function required(name) {
+  const value = process.env[name];
+  if (!value || !String(value).trim()) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return String(value).trim();
+}
+
+function optional(name, fallback = '') {
+  const value = process.env[name];
+  return value === undefined ? fallback : String(value).trim();
+}
+
+function toBool(value, fallback = false) {
+  if (value === undefined || value === null || value === '') return fallback;
+  return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase());
+}
+
+function toNumber(value, fallback = null) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 export const config = {
-  port: Number(process.env.PORT || 3000),
-  databaseUrl: process.env.DATABASE_URL,
-
+  app: {
+    port: toNumber(process.env.PORT, 3000),
+    env: optional('NODE_ENV', 'development'),
+  },
+  timezone: optional('APP_TIMEZONE', 'America/New_York'),
   teamup: {
-    apiKey: process.env.TEAMUP_API_KEY || '',
-    calendarKey: process.env.TEAMUP_CALENDAR_KEY || '',
-    webhookSecret: process.env.TEAMUP_WEBHOOK_SECRET || '',
-    apiBaseUrl: 'https://api.teamup.com',
-  },
+    skipSignatureVerify: toBool(process.env.TEAMUP_SKIP_SIGNATURE_VERIFY, false),
 
-  sync: {
-    enableReverseSync: String(process.env.ENABLE_REVERSE_SYNC || 'false').toLowerCase() === 'true',
-    pollIntervalMs: Number(process.env.POLL_INTERVAL_MS || 300000),
+    webhookSecret: required('TEAMUP_WEBHOOK_SECRET'),
+    calendarId: optional('TEAMUP_CALENDAR_ID'),
+    apiKey: optional('TEAMUP_API_KEY'),
+    baseUrl: optional('TEAMUP_BASE_URL', 'https://api.teamup.com'),
   },
-
   tebra: {
-    soapUrl: process.env.TEBRA_SOAP_URL,
-    customerKey: process.env.TEBRA_CUSTOMER_KEY,
-    password: process.env.TEBRA_SOAP_PASSWORD,
-    username: process.env.TEBRA_SOAP_USERNAME,
-    practiceName: process.env.TEBRA_PRACTICE_NAME,
-    practiceId: Number(process.env.TEBRA_PRACTICE_ID),
-    serviceLocationId: Number(process.env.TEBRA_SERVICE_LOCATION_ID),
-    defaultAppointmentMode: process.env.TEBRA_DEFAULT_APPOINTMENT_MODE || 'Telehealth',
+    soapUrl: optional(
+      'TEBRA_SOAP_URL',
+      'https://webservice.kareo.com/services/soap/2.1/KareoServices.svc'
+    ),
+    customerKey: required('TEBRA_CUSTOMER_KEY'),
+    username: required('TEBRA_USERNAME'),
+    password: required('TEBRA_PASSWORD'),
+    practiceId: required('TEBRA_PRACTICE_ID'),
+    practiceName: required('TEBRA_PRACTICE_NAME'),
+    serviceLocationId: required('TEBRA_SERVICE_LOCATION_ID'),
+    serviceLocationName: required('TEBRA_SERVICE_LOCATION_NAME'),
   },
-
-  timezone: process.env.DEFAULT_TIMEZONE || 'America/New_York',
+  sync: {
+    dryRun: toBool(process.env.SYNC_DRY_RUN, true),
+    autoDeleteAfterVerify: toBool(process.env.SYNC_AUTO_DELETE_AFTER_VERIFY, false),
+    verifyDelayMs: toNumber(process.env.SYNC_VERIFY_DELAY_MS, 1200),
+    testMarker: optional('SYNC_TEST_MARKER', 'TEST - JJ TEAMUP SYNC'),
+  },
 };
