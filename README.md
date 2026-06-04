@@ -25,3 +25,6 @@ npm install
 psql "$DATABASE_URL" -f db/schema.sql
 npm run dev
 
+
+## Deployment
+Production server: Mac Mini (SBH Server) - sync.solreibehavioralhealth.com
