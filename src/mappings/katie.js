@@ -1,27 +1,14 @@
 import { config } from '../config.js';
 import { toUtcIso } from '../utils/time.js';
 
-// NOTE: This builds the `Appointment` (AppointmentCreate) data contract only.
-// It does NOT build RequestHeader — that auth header (ClientVersion, CustomerKey,
-// Password, User) is assembled in tebraClient.js and is where field-order matters
-// for authentication.
-//
-// AppointmentCreate is an <xs:sequence> with elementFormDefault="qualified", so
-// the *order* of these fields matters if the serializer preserves key order.
-// Keys below are ordered to match the WSDL AppointmentCreate sequence.
-//
-// CAUTION: `appointmentMode` is the one field whose enum type lives in a DIFFERENT
-// namespace (http://schemas.datacontract.org/2004/07/AppointmentService.Model).
-// tebraClient.js must qualify that element accordingly. Valid values: InOffice, Telehealth.
+// Katherine Robins' blocked-time appointments are represented in Tebra by a
+// dedicated placeholder patient (PatientID 905).
+const KR_H2_KATIES_APPT1_PATIENT_NAME = "KR H2 Katie's Appt1";
+const KR_H2_KATIES_APPT1_PATIENT_ID = 905;
 
-// Jodene Jensen's blocked-time appointments are represented in Tebra by a
-// dedicated placeholder patient (PatientID 675).
-const JODENE_BLOCK_PATIENT_NAME = 'Jodene Busy Mac Mail';
-const JODENE_BLOCK_PATIENT_ID = 675;
-
-const JODENE_MAPPING = {
+const KATIE_MAPPING = {
     // ---- identifiers / metadata used by the client to look things up ----
-    providerName: 'Jodene Jensen',
+    providerName: 'Katherine Robins',
     practiceId: Number(config.tebra.practiceId),
     practiceName: config.tebra.practiceName,
     serviceLocationId: Number(config.tebra.serviceLocationId),
@@ -33,29 +20,29 @@ const JODENE_MAPPING = {
     appointmentType: 'P',
     appointmentMode: 'Telehealth',
     isRecurring: false,
-    patientId: JODENE_BLOCK_PATIENT_ID,
-    providerId: 1,
+    patientId: KR_H2_KATIES_APPT1_PATIENT_ID,
+    providerId: 2,
     resourceId: 4,
     resourceIds: [4],
     wasCreatedOnline: false,
 };
 
-export function buildJodeneCreatePayload(teamupEvent) {
+export function buildKatieCreatePayload(teamupEvent) {
     const teamupId = teamupEvent.teamupEventId || teamupEvent.id || 'unknown';
     const startsAtUtc = toUtcIso(teamupEvent.startsAt);
     const endsAtUtc = toUtcIso(teamupEvent.endsAt);
     const marker = String(config.sync.testMarker || 'TEAMUP-TEST').trim();
 
     // PRIVACY: AppointmentName is ALWAYS the placeholder patient name — never the Teamup event title.
-    const appointmentName = `${marker} | ${JODENE_BLOCK_PATIENT_NAME}`.slice(0, 100);
+    const appointmentName = `${marker} | ${KR_H2_KATIES_APPT1_PATIENT_NAME}`.slice(0, 100);
     const patientSummary = {
-        patientId: JODENE_BLOCK_PATIENT_ID,
-        firstName: 'Jodene',
-        lastName: 'Busy Mac Mail',
+        patientId: KR_H2_KATIES_APPT1_PATIENT_ID,
+        firstName: 'KR',
+        lastName: "H2 Katie's Appt1",
     };
 
     return {
-        ...JODENE_MAPPING,
+        ...KATIE_MAPPING,
         appointmentName,
         startTime: startsAtUtc,
         endTime: endsAtUtc,
@@ -70,7 +57,7 @@ export function buildJodeneCreatePayload(teamupEvent) {
     };
 }
 
-export function buildJodeneUpdatePayload(teamupEvent, tebraAppointmentId) {
+export function buildKatieUpdatePayload(teamupEvent, tebraAppointmentId) {
     const teamupId = teamupEvent.teamupEventId || teamupEvent.id || 'unknown';
     const startsAtUtc = toUtcIso(teamupEvent.startsAt);
     const endsAtUtc = toUtcIso(teamupEvent.endsAt);
@@ -78,29 +65,29 @@ export function buildJodeneUpdatePayload(teamupEvent, tebraAppointmentId) {
 
     return {
         appointmentId: tebraAppointmentId,
-        appointmentMode: JODENE_MAPPING.appointmentMode,
-        appointmentName: `${marker} | ${JODENE_BLOCK_PATIENT_NAME}`.slice(0, 100),
-        appointmentReasonId: JODENE_MAPPING.appointmentReasonId,
-        appointmentStatus: JODENE_MAPPING.appointmentStatus,
-        appointmentType: JODENE_MAPPING.appointmentType,
+        appointmentMode: KATIE_MAPPING.appointmentMode,
+        appointmentName: `${marker} | ${KR_H2_KATIES_APPT1_PATIENT_NAME}`.slice(0, 100),
+        appointmentReasonId: KATIE_MAPPING.appointmentReasonId,
+        appointmentStatus: KATIE_MAPPING.appointmentStatus,
+        appointmentType: KATIE_MAPPING.appointmentType,
         endTime: endsAtUtc,
-        isRecurring: JODENE_MAPPING.isRecurring,
+        isRecurring: KATIE_MAPPING.isRecurring,
         notes: [
             marker,
             `TeamupEventID=${teamupId}`,
             `SourceStartUTC=${startsAtUtc}`,
             `SourceEndUTC=${endsAtUtc}`,
         ].join(' | '),
-        patientId: JODENE_BLOCK_PATIENT_ID,
-        practiceId: JODENE_MAPPING.practiceId,
-        providerId: JODENE_MAPPING.providerId,
+        patientId: KR_H2_KATIES_APPT1_PATIENT_ID,
+        practiceId: KATIE_MAPPING.practiceId,
+        providerId: KATIE_MAPPING.providerId,
         resourceId: 0,
-        serviceLocationId: JODENE_MAPPING.serviceLocationId,
+        serviceLocationId: KATIE_MAPPING.serviceLocationId,
         startTime: startsAtUtc,
     };
 }
 
-export function buildJodeneVerificationFilter(teamupEvent) {
+export function buildKatieVerificationFilter(teamupEvent) {
     const start = new Date(teamupEvent.startsAt);
     const end = new Date(teamupEvent.endsAt);
 
@@ -110,7 +97,7 @@ export function buildJodeneVerificationFilter(teamupEvent) {
     return {
         practiceName: config.tebra.practiceName,
         serviceLocationName: config.tebra.serviceLocationName,
-        patientId: JODENE_BLOCK_PATIENT_ID,
+        patientId: KR_H2_KATIES_APPT1_PATIENT_ID,
         startDate: toUtcIso(from),
         endDate: toUtcIso(to),
     };

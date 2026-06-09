@@ -3,16 +3,21 @@ import { normalizeTeamupEvent, verifyTeamupWebhook, isTeamupHandshakePayload } f
 import { routeEvent } from '../services/appointmentSyncService.js';
 
 // Two-layer calendar guard:
-//   PARENT_CALENDAR_KEY  — the top-level Teamup calendar key (payload.calendar).
-//                          Matches TEAMUP_CALENDAR_ID in .env.
-//   SOURCE_SUBCALENDAR_ID — numeric ID of the ONE subcalendar to sync ("JJ Mac no details").
-//                           All other subcalendars in the same parent are ignored.
+//   PARENT_CALENDAR_KEY      — the top-level Teamup calendar key (payload.calendar).
+//                              Matches TEAMUP_CALENDAR_ID in .env.
+//   KNOWN_SUBCALENDAR_IDS    — set of subcalendar IDs to sync, one per provider/calendar.
+//                              All other subcalendars in the same parent are ignored.
 //
-// ⚠️  Verify SOURCE_SUBCALENDAR_ID against your Teamup settings if events are
-//     unexpectedly ignored or processed — confirmed from real webhook payload 2026-06-03.
-const PARENT_CALENDAR_KEY   = 'i5eg7g';      // top-level calendar key (from .env TEAMUP_CALENDAR_ID)
-const SOURCE_SUBCALENDAR_ID = 12333159;      // subcalendar that fires in all webhook payloads for this calendar
-                                             // NOTE: 20384076 is the Teamup sharing LINK config ID (different thing)
+// To add a new provider: add their subcalendar ID here AND add an entry to
+// PROVIDER_REGISTRY in appointmentSyncService.js.
+//
+// ⚠️  Verify subcalendar IDs against real webhook payloads — confirmed from payload 2026-06-03.
+const PARENT_CALENDAR_KEY = 'i5eg7g';
+const KNOWN_SUBCALENDAR_IDS = new Set([
+    12333159,   // Jodene Jensen — JJ Mac no details
+    13976774,   // Katherine Robins — KR H2 no details
+]);
+// NOTE: 20384076 is a Teamup sharing LINK config ID — not a subcalendar ID.
 
 export async function handleTeamupWebhook(req, res) {
     try {
@@ -142,11 +147,10 @@ async function _processWebhookPayload(payload) {
             console.log(`Ignoring event: wrong parent calendar ${normalized.calendarId} (expected ${PARENT_CALENDAR_KEY})`);
             continue;
         }
-        if (Number(normalized.subcalendarId) !== SOURCE_SUBCALENDAR_ID) {
-            console.log(`Ignoring event: subcalendar ${normalized.subcalendarId} is not the sync source (expected ${SOURCE_SUBCALENDAR_ID})`);
+        if (!KNOWN_SUBCALENDAR_IDS.has(Number(normalized.subcalendarId))) {
+            console.log(`Ignoring event: subcalendar ${normalized.subcalendarId} is not a registered sync source`);
             continue;
         }
-
         // 6. Skip recurring series definitions.
         //    When rrule is present, the event represents a full recurring series
         //    (start_dt = first occurrence, end_dt = series end or 9999).
