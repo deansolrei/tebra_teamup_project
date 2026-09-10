@@ -1,6 +1,7 @@
 import { config } from '../config.js';
 import { normalizeTeamupEvent, verifyTeamupWebhook, isTeamupHandshakePayload } from '../utils/teamupWebhook.js';
 import { routeEvent } from '../services/appointmentSyncService.js';
+import * as dlq from '../utils/dlq.js';
 
 // Two-layer calendar guard:
 //   PARENT_CALENDAR_KEY      — the top-level Teamup calendar key (payload.calendar).
@@ -16,6 +17,7 @@ const PARENT_CALENDAR_KEY = 'i5eg7g';
 const KNOWN_SUBCALENDAR_IDS = new Set([
     12333159,   // Jodene Jensen — JJ Mac no details
     13976774,   // Katherine Robins — KR H2 no details
+14920229,   // Lori Kistler — LK Home
 ]);
 // NOTE: 20384076 is a Teamup sharing LINK config ID — not a subcalendar ID.
 
@@ -178,6 +180,7 @@ async function _processWebhookPayload(payload) {
             console.log('routeEvent result:', JSON.stringify(result, null, 2));
         } catch (err) {
             console.error(`routeEvent failed for event ${normalized.teamupEventId}:`, err.message);
+            await dlq.enqueue(normalized, err.message);
         }
     }
 }

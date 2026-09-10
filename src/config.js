@@ -1,7 +1,5 @@
 import dotenv from 'dotenv';
-
 dotenv.config();
-
 function required(name) {
   const value = process.env[name];
   if (!value || !String(value).trim()) {
@@ -9,23 +7,19 @@ function required(name) {
   }
   return String(value).trim();
 }
-
 function optional(name, fallback = '') {
   const value = process.env[name];
   return value === undefined ? fallback : String(value).trim();
 }
-
 function toBool(value, fallback = false) {
   if (value === undefined || value === null || value === '') return fallback;
   return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase());
 }
-
 function toNumber(value, fallback = null) {
   if (value === undefined || value === null || value === '') return fallback;
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
 }
-
 export const config = {
   app: {
     port: toNumber(process.env.PORT, 3000),
@@ -34,10 +28,10 @@ export const config = {
   timezone: optional('APP_TIMEZONE', 'America/New_York'),
   teamup: {
     skipSignatureVerify: toBool(process.env.TEAMUP_SKIP_SIGNATURE_VERIFY, false),
-
     webhookSecret: required('TEAMUP_WEBHOOK_SECRET'),
     calendarId: optional('TEAMUP_CALENDAR_ID'),
     apiKey: optional('TEAMUP_API_KEY'),
+    apiCalendarKey: optional('TEAMUP_API_CALENDAR_KEY'),
     baseUrl: optional('TEAMUP_BASE_URL', 'https://api.teamup.com'),
   },
   tebra: {

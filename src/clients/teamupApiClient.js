@@ -1,6 +1,5 @@
 import axios from 'axios';
-import { config } from './config.js';
-
+import { config } from '../config.js';
 const client = axios.create({
   baseURL: config.teamup.baseUrl,
   timeout: 30000,
@@ -10,85 +9,65 @@ const client = axios.create({
     Accept: 'application/json',
   },
 });
-
 function calendarPath(path) {
-  return `/ks/${config.teamup.calendarId}${path}`;
+  return `/${config.teamup.apiCalendarKey}${path}`;
 }
-
 function compactParams(obj) {
   return Object.fromEntries(
     Object.entries(obj).filter(([, value]) => value !== undefined && value !== null && value !== '')
   );
 }
-
 function ensureObject(value, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error(`${label} must be an object`);
   }
 }
-
 export async function getEvents({
   startDate,
   endDate,
   updatedSince,
   subcalendarId,
 } = {}) {
-  const response = await client.get(calendarPath('/events'), {
-    params: compactParams({
-      startDate,
-      endDate,
-      updatedSince,
-      subcalendarId,
-    }),
-  });
-
+  const params = compactParams({ startDate, endDate, updatedSince });
+  if (subcalendarId !== undefined && subcalendarId !== null) {
+    params.subcalendarId = Array.isArray(subcalendarId) ? subcalendarId : [subcalendarId];
+  }
+  const response = await client.get(calendarPath('/events'), { params });
   return response.data;
 }
-
 export async function getEvent(eventId) {
   if (!eventId) {
     throw new Error('eventId is required');
   }
-
   const response = await client.get(calendarPath(`/events/${eventId}`));
   return response.data;
 }
-
 export async function createEvent(event) {
   ensureObject(event, 'event');
-
   const response = await client.post(
     calendarPath('/events'),
     sanitizeEventPayload(event)
   );
-
   return response.data;
 }
-
 export async function updateEvent(eventId, event) {
   if (!eventId) {
     throw new Error('eventId is required');
   }
-
   ensureObject(event, 'event');
-
   const response = await client.put(
     calendarPath(`/events/${eventId}`),
     sanitizeEventPayload(event)
   );
-
   return response.data;
 }
-
 export async function deleteEvent(eventId) {
   if (!eventId) {
     throw new Error('eventId is required');
   }
-
   const response = await client.delete(calendarPath(`/events/${eventId}`));
   return response.data;
 }
-
 function sanitizeEventPayload(event) {
   return compactParams({
     title: event.title,
