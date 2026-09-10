@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SolCore — Full-Suite Status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Wix+Madefor+Display:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --slate:#7494AA; --cream:#F2EDDB; --sage:#8AAF9C; --deep:#09371F;
+  --white:#FBFBF3; --tan:#D6CDAC; --olive:#777355; --ink:#2B2716; --teal:#3D768A;
+  --green:#4b8a5f; --yellow:#d9a441; --red:#b3401f;
+}
+*{box-sizing:border-box;}
+body{margin:0; font-family:'Wix Madefor Display', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; background:var(--white); color:var(--ink);}
+.header{background:var(--ink); color:var(--cream); padding:20px 28px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+.header h1{margin:0; font-size:1.3rem;}
+.header .sub{font-size:0.8rem; color:#c9c2ab; margin-top:2px;}
+.wrap{max-width:1000px; margin:0 auto; padding:28px;}
+.overall-banner{border-radius:14px; padding:20px 26px; margin-bottom:24px; color:#fff; display:flex; align-items:center; gap:16px; font-weight:800; font-size:1.15rem;}
+.overall-banner .dot{width:16px; height:16px; border-radius:50%; background:#fff; flex-shrink:0;}
+.g-bg{background:var(--green);} .y-bg{background:var(--yellow); color:#3a2b00;} .r-bg{background:var(--red);}
+.grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:14px;}
+.card{background:#fff; border:1px solid var(--tan); border-radius:12px; padding:16px 18px; box-shadow:0 2px 6px rgba(43,39,22,0.06);}
+.card .top{display:flex; align-items:center; gap:8px; margin-bottom:6px;}
+.card .dot{width:12px; height:12px; border-radius:50%; flex-shrink:0;}
+.g{background:var(--green);} .y{background:var(--yellow);} .r{background:var(--red);} .u{background:#999;}
+.card h3{margin:0; font-size:1rem; color:var(--deep);}
+.card p{margin:0; font-size:0.85rem; color:var(--olive);}
+.footer-note{margin-top:26px; font-size:0.8rem; color:var(--olive); text-align:center;}
+.quick{background:var(--cream); border-radius:12px; padding:16px 20px; margin-top:24px; font-size:0.85rem;}
+.quick h3{margin:0 0 8px; font-size:0.95rem; color:var(--deep);}
+.quick code{background:#fff; border:1px solid var(--tan); border-radius:5px; padding:2px 7px; font-family:'Courier New',monospace; display:inline-block; margin:2px 0;}
+.stamp{font-size:0.75rem; color:var(--olive); text-align:right; margin-top:6px;}
+a{color:var(--teal);}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1>🖥️ SolCore — Full-Suite Status</h1>
+    <div class="sub">sbhserver1 · Auto-refreshes every 30 seconds</div>
+  </div>
+  <div class="sub"><a href="http://192.168.88.178:3001/status" style="color:#9fc9d6;">Tebra Sync only →</a></div>
+</div>
+
+<div class="wrap">
+  <div id="banner" class="overall-banner g-bg"><span class="dot"></span><span id="banner-text">Loading…</span></div>
+
+  <div id="cards" class="grid"></div>
+
+  <div class="quick">
+    <h3>Quick Commands</h3>
+    <div>Restart Tebra Sync: <code>pm2 restart tebra-teamup-sync</code></div>
+    <div>Restart SolRate: <code>pm2 restart cpt-dashboard</code></div>
+    <div>Restart Alex: <code>pm2 restart solrei-voice-agent</code></div>
+    <div>See all services: <code>pm2 status</code></div>
+  </div>
+
+  <div class="stamp" id="stamp">—</div>
+  <div class="footer-note">This page is read-only and contains no patient data. Full command reference lives in the SolCore manual's Engine Room.</div>
+</div>
+
+<script>
+const LABELS = {
+  tebraSync: '📅 Tebra Sync',
+  solRate: '💰 SolRate',
+  alex: '🎙️ Alex',
+  postgres: '🗄️ PostgreSQL',
+  cloudflareTunnel: '☁️ Cloudflare Tunnel',
+};
+const OVERALL_LABEL = { green: '✅ All Systems Normal', yellow: '⚠️ Needs Attention', red: '⛔ Service Down' };
+const OVERALL_CLASS = { green: 'g-bg', yellow: 'y-bg', red: 'r-bg' };
+const DOT_CLASS = { green: 'g', yellow: 'y', red: 'r', unknown: 'u' };
+
+async function refresh(){
+  try{
+    const res = await fetch('/status/suite/data', { cache: 'no-store' });
+    const data = await res.json();
+
+    const banner = document.getElementById('banner');
+    banner.className = 'overall-banner ' + (OVERALL_CLASS[data.overall] || 'y-bg');
+    document.getElementById('banner-text').textContent = OVERALL_LABEL[data.overall] || 'Unknown';
+
+    const cardsEl = document.getElementById('cards');
+    cardsEl.innerHTML = '';
+    for (const key in data.services){
+      const svc = data.services[key];
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `<div class="top"><span class="dot ${DOT_CLASS[svc.status]||'u'}"></span><h3>${LABELS[key]||key}</h3></div><p>${svc.detail}</p>`;
+      cardsEl.appendChild(card);
+    }
+    const diskCard = document.createElement('div');
+    diskCard.className = 'card';
+    diskCard.innerHTML = `<div class="top"><span class="dot ${DOT_CLASS[data.host.disk.status]||'u'}"></span><h3>💾 Disk Space</h3></div><p>${data.host.disk.detail}</p>`;
+    cardsEl.appendChild(diskCard);
+
+    document.getElementById('stamp').textContent = 'Last updated: ' + new Date(data.timestamp).toLocaleString();
+  } catch(e){
+    document.getElementById('banner-text').textContent = '⛔ Could not reach the status endpoint';
+    document.getElementById('banner').className = 'overall-banner r-bg';
+  }
+}
+refresh();
+setInterval(refresh, 30000);
+</script>
+</body>
+</html>
+
